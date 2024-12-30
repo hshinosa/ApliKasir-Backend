@@ -1,19 +1,25 @@
 const db = require('./db');
 
 class RiwayatAdmin {
-    static getAll(callback) {
+    static async getAll() {
+        const connection = await db();
         const query = 'SELECT * FROM riwayat_admin';
-        db.query(query, callback);
+        const [results] = await connection.query(query);
+        return results;
     }
 
-    static getByAdminId(id_admin, callback) {
+    static async getByAdminId(id_admin) {
+        const connection = await db();
         const query = 'SELECT * FROM riwayat_admin WHERE id_admin = ?';
-        db.query(query, [id_admin], callback);
+        const [results] = await connection.query(query, [id_admin]);
+        return results;
     }
 
-    static create(data, callback) {
+    static async create(data) {
+        const connection = await db();
         const query = 'INSERT INTO riwayat_admin SET ?';
-        db.query(query, data, callback);
+        const [results] = await connection.query(query, data);
+        return results;
     }
 }
 

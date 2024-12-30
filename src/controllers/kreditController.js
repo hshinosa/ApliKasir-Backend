@@ -1,42 +1,54 @@
 const Kredit = require('../models/kreditModel');
 
-exports.getAllKredit = (req, res) => {
-    Kredit.getAll((err, results) => {
-        if (err) return res.status(500).send(err);
-        res.json(results);
-    });
+exports.getAllKredit = async (req, res) => {
+    try {
+        const results = await Kredit.getAll();
+        res.status(200).json(results);
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching kredit data', error: err });
+    }
 };
 
-exports.getKreditById = (req, res) => {
+exports.getKreditById = async (req, res) => {
     const { id } = req.params;
-    Kredit.getById(id, (err, results) => {
-        if (err) return res.status(500).send(err);
-        if (results.length === 0) return res.status(404).send('Kredit not found');
-        res.json(results[0]);
-    });
+    try {
+        const results = await Kredit.getById(id);
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'Kredit not found' });
+        }
+        res.status(200).json(results[0]);
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching kredit by ID', error: err });
+    }
 };
 
-exports.createKredit = (req, res) => {
+exports.createKredit = async (req, res) => {
     const data = req.body;
-    Kredit.create(data, (err, results) => {
-        if (err) return res.status(500).send(err);
-        res.status(201).json({ id: results.insertId, ...data });
-    });
+    try {
+        const result = await Kredit.create(data);
+        res.status(201).json({ id: result.insertId, ...data });
+    } catch (err) {
+        res.status(500).json({ message: 'Error creating kredit', error: err });
+    }
 };
 
-exports.updateKredit = (req, res) => {
+exports.updateKredit = async (req, res) => {
     const { id } = req.params;
     const data = req.body;
-    Kredit.update(id, data, (err) => {
-        if (err) return res.status(500).send(err);
-        res.json({ message: 'Kredit updated successfully' });
-    });
+    try {
+        await Kredit.update(id, data);
+        res.status(200).json({ message: 'Kredit updated successfully' });
+    } catch (err) {
+        res.status(500).json({ message: 'Error updating kredit', error: err });
+    }
 };
 
-exports.deleteKredit = (req, res) => {
+exports.deleteKredit = async (req, res) => {
     const { id } = req.params;
-    Kredit.delete(id, (err) => {
-        if (err) return res.status(500).send(err);
-        res.json({ message: 'Kredit deleted successfully' });
-    });
+    try {
+        await Kredit.delete(id);
+        res.status(200).json({ message: 'Kredit deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ message: 'Error deleting kredit', error: err });
+    }
 };

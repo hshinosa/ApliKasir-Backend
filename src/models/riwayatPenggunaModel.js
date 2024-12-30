@@ -1,19 +1,25 @@
 const db = require('./db');
 
 class RiwayatPengguna {
-    static getAll(callback) {
+    static async getAll() {
+        const connection = await db();
         const query = 'SELECT * FROM riwayat_pengguna';
-        db.query(query, callback);
+        const [results] = await connection.query(query);
+        return results;
     }
 
-    static getByPenggunaId(id_pengguna, callback) {
+    static async getByPenggunaId(id_pengguna) {
+        const connection = await db();
         const query = 'SELECT * FROM riwayat_pengguna WHERE id_pengguna = ?';
-        db.query(query, [id_pengguna], callback);
+        const [results] = await connection.query(query, [id_pengguna]);
+        return results;
     }
 
-    static create(data, callback) {
+    static async create(data) {
+        const connection = await db();
         const query = 'INSERT INTO riwayat_pengguna SET ?';
-        db.query(query, data, callback);
+        const [results] = await connection.query(query, data);
+        return results;
     }
 }
 

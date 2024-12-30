@@ -2,182 +2,114 @@ const Transaksi = require('../models/transaksiModel');
 const Produk = require('../models/produkModel');
 const Pengguna = require('../models/penggunaModel');
 
-exports.getAllTransaksi = (req, res) => {
-    // Ambil semua transaksi
-    Transaksi.getAll((err, transaksi) => {
-        if (err) return res.status(500).send(err);
+// Get all transactions with details
+exports.getAllTransaksi = async (req, res) => {
+    try {
+        const transaksi = await Transaksi.getAll();
+        
+        const transaksiDetails = await Promise.all(transaksi.map(async (transaksiItem) => {
+            const details = await Transaksi.getDetailByTransaksiId(transaksiItem.id);
 
-        // Ambil detail untuk setiap transaksi
-        const transaksiPromises = transaksi.map(transaksiItem => {
-            return new Promise((resolve, reject) => {
-                // Ambil detail transaksi berdasarkan id transaksi
-                Transaksi.getDetailByTransaksiId(transaksiItem.id, (err, details) => {
-                    if (err) return reject(err);
+            const produkDetails = await Promise.all(details.map(async (detail) => {
+                const produk = await Produk.getById(detail.id_produk);
+                if (!produk.length) throw new Error(`Produk dengan ID ${detail.id_produk} tidak ditemukan`);
 
-                    // Ambil informasi produk terkait dengan setiap detail transaksi
-                    const produkPromises = details.map(detail => {
-                        return new Promise((resolve, reject) => {
-                            Produk.getById(detail.id_produk, (err, produk) => {
-                                if (err) return reject(err);
-                                if (produk.length === 0) return reject(`Produk dengan ID ${detail.id_produk} tidak ditemukan`);
+                return {
+                    id: detail.id_produk,
+                    nama_produk: produk[0].nama_produk,
+                    harga_satuan: detail.harga_satuan,
+                    kuantitas: detail.kuantitas,
+                    subtotal: detail.harga_satuan * detail.kuantitas,
+                };
+            }));
 
-                                // Gabungkan detail dengan produk untuk mendapatkan informasi lengkap
-                                resolve({
-                                    id: detail.id_produk,
-                                    nama_produk: produk[0].nama_produk,
-                                    harga_satuan: detail.harga_satuan,
-                                    kuantitas: detail.kuantitas,
-                                    subtotal: detail.harga_satuan * detail.kuantitas
-                                });
-                            });
-                        });
-                    });
+            return {
+                ...transaksiItem,
+                details: produkDetails,
+            };
+        }));
 
-                    // Tunggu hingga semua produk selesai didapatkan
-                    Promise.all(produkPromises)
-                        .then(produkDetails => {
-                            resolve({
-                                ...transaksiItem,
-                                details: produkDetails
-                            });
-                        })
-                        .catch(err => {
-                            reject(err);
-                        });
-                });
-            });
-        });
-
-        // Tunggu hingga semua transaksi dan detailnya selesai
-        Promise.all(transaksiPromises)
-            .then(transaksiDetails => {
-                res.json(transaksiDetails);
-            })
-            .catch(err => {
-                res.status(500).send(err);
-            });
-    });
+        res.status(200).json(transaksiDetails);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 };
 
-exports.getTransaksiById = (req, res) => {
+// Get a single transaction by ID with details
+exports.getTransaksiById = async (req, res) => {
     const { id } = req.params;
+    try {
+        const transaksi = await Transaksi.getById(id);
+        if (!transaksi.length) return res.status(404).json({ message: 'Transaksi not found' });
 
-    // Cek apakah transaksi dengan id ada
-    Transaksi.getById(id, (err, transaksi) => {
-        if (err) return res.status(500).send(err);
-        if (transaksi.length === 0) return res.status(404).send('Transaksi not found');
+        const details = await Transaksi.getDetailByTransaksiId(id);
+        const produkDetails = await Promise.all(details.map(async (detail) => {
+            const produk = await Produk.getById(detail.id_produk);
+            if (!produk.length) throw new Error(`Produk dengan ID ${detail.id_produk} tidak ditemukan`);
 
-        // Ambil detail transaksi berdasarkan id transaksi
-        Transaksi.getDetailByTransaksiId(id, (err, details) => {
-            if (err) return res.status(500).send(err);
-            if (details.length === 0) return res.status(404).send('Details not found for this transaction');
+            return {
+                id: detail.id_produk,
+                nama_produk: produk[0].nama_produk,
+                harga_satuan: detail.harga_satuan,
+                kuantitas: detail.kuantitas,
+                subtotal: detail.harga_satuan * detail.kuantitas,
+            };
+        }));
 
-            // Ambil informasi produk terkait dengan setiap detail transaksi
-            const produkPromises = details.map(detail => {
-                return new Promise((resolve, reject) => {
-                    Produk.getById(detail.id_produk, (err, produk) => {
-                        if (err) return reject(err);
-                        if (produk.length === 0) return reject(`Produk dengan ID ${detail.id_produk} tidak ditemukan`);
-                        
-                        // Gabungkan detail dengan produk untuk mendapatkan informasi lengkap
-                        resolve({
-                            id: detail.id_produk,
-                            nama_produk: produk[0].nama_produk,
-                            harga_satuan: detail.harga_satuan,
-                            kuantitas: detail.kuantitas,
-                            subtotal: detail.harga_satuan * detail.kuantitas
-                        });
-                    });
-                });
-            });
-
-            // Tunggu hingga semua produk selesai didapatkan
-            Promise.all(produkPromises)
-                .then(produkDetails => {
-                    res.json({
-                        ...transaksi[0],
-                        details: produkDetails
-                    });
-                })
-                .catch(err => {
-                    res.status(500).send(err);
-                });
+        res.status(200).json({
+            ...transaksi[0],
+            details: produkDetails,
         });
-    });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 };
 
-exports.createTransaksi = (req, res) => {
+// Create a new transaction
+exports.createTransaksi = async (req, res) => {
     const { id_pengguna, metode_pembayaran, jenis_transaksi, items } = req.body;
 
-    // Validasi input
-    if (!id_pengguna || !items || items.length === 0 || !jenis_transaksi) {
+    // Validate input
+    if (!id_pengguna || !items || !items.length || !jenis_transaksi) {
         return res.status(400).json({ message: 'id_pengguna, jenis_transaksi, and items are required' });
     }
 
-    // Validasi jenis_transaksi
     if (!['pembayaran', 'kredit'].includes(jenis_transaksi)) {
         return res.status(400).json({ message: 'Invalid jenis_transaksi' });
     }
 
-    // Cek apakah ID Pengguna ada dalam tabel pengguna
-    Pengguna.getById(id_pengguna, (err, pengguna) => {
-        if (err) return res.status(500).send(err);
-        if (pengguna.length === 0) return res.status(404).json({ message: `Pengguna dengan ID ${id_pengguna} tidak ditemukan` });
+    try {
+        const pengguna = await Pengguna.getById(id_pengguna);
+        if (!pengguna.length) {
+            return res.status(404).json({ message: `Pengguna dengan ID ${id_pengguna} tidak ditemukan` });
+        }
 
-        // Hitung total harga berdasarkan produk
         let total_harga = 0;
 
-        // Validasi produk dan hitung subtotal
-        Promise.all(
-            items.map(item => {
-                return new Promise((resolve, reject) => {
-                    Produk.getById(item.id_produk, (err, produk) => {
-                        if (err) return reject(err);
-                        if (produk.length === 0) return reject(`Produk dengan ID ${item.id_produk} tidak ditemukan`);
+        // Validate and calculate total price
+        await Promise.all(items.map(async (item) => {
+            const produk = await Produk.getById(item.id_produk);
+            if (!produk.length) throw new Error(`Produk dengan ID ${item.id_produk} tidak ditemukan`);
 
-                        // Hitung harga total untuk item
-                        item.harga_satuan = produk[0].harga_jual;
-                        total_harga += produk[0].harga_jual * item.kuantitas;
-                        resolve();
-                    });
-                });
-            })
-        )
-        .then(() => {
-            // Buat transaksi
-            const transaksiData = { id_pengguna, metode_pembayaran, jenis_transaksi, total_harga };
+            item.harga_satuan = produk[0].harga_jual;
+            total_harga += produk[0].harga_jual * item.kuantitas;
+        }));
 
-            Transaksi.create(transaksiData, (err, results) => {
-                if (err) return res.status(500).send(err);
-                const id_transaksi = results.insertId;
+        const transaksiData = { id_pengguna, metode_pembayaran, jenis_transaksi, total_harga };
+        const { insertId: id_transaksi } = await Transaksi.create(transaksiData);
 
-                // Buat detail transaksi
-                const detailPromises = items.map(item => {
-                    return new Promise((resolve, reject) => {
-                        Transaksi.createDetail({
-                            id_transaksi,
-                            id_produk: item.id_produk,
-                            kuantitas: item.kuantitas,
-                            harga_satuan: item.harga_satuan,
-                        }, (err) => {
-                            if (err) return reject(err);
-                            resolve();
-                        });
-                    });
-                });
-
-                // Tunggu hingga semua detail transaksi selesai
-                Promise.all(detailPromises)
-                    .then(() => {
-                        res.status(201).json({ message: 'Transaksi created successfully', id_transaksi });
-                    })
-                    .catch(err => {
-                        res.status(500).send(err);
-                    });
+        // Create transaction details
+        await Promise.all(items.map(async (item) => {
+            await Transaksi.createDetail({
+                id_transaksi,
+                id_produk: item.id_produk,
+                kuantitas: item.kuantitas,
+                harga_satuan: item.harga_satuan,
             });
-        })
-        .catch(err => {
-            res.status(400).json({ message: err.message });
-        });
-    });
+        }));
+
+        res.status(201).json({ message: 'Transaksi created successfully', id_transaksi });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 };

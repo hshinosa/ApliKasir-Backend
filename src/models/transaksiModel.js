@@ -1,43 +1,53 @@
 const db = require('./db');
 
 class Transaksi {
-    static getAll(callback) {
+    static async getAll() {
+        const connection = await db();
         const query = `
             SELECT t.*, p.nama AS pengguna_nama 
             FROM transaksi t 
             JOIN pengguna p ON t.id_pengguna = p.id
         `;
-        db.query(query, callback);
+        const [results] = await connection.query(query);
+        return results;
     }
 
-    static getById(id, callback) {
+    static async getById(id) {
+        const connection = await db();
         const query = `
             SELECT t.*, p.nama AS pengguna_nama 
             FROM transaksi t 
             JOIN pengguna p ON t.id_pengguna = p.id 
             WHERE t.id = ?
         `;
-        db.query(query, [id], callback);
+        const [results] = await connection.query(query, [id]);
+        return results;
     }
 
-    static getDetailByTransaksiId(id_transaksi, callback) {
+    static async getDetailByTransaksiId(id_transaksi) {
+        const connection = await db();
         const query = `
             SELECT d.*, pr.nama_produk 
             FROM detail_transaksi d 
             JOIN produk pr ON d.id_produk = pr.id 
             WHERE d.id_transaksi = ?
         `;
-        db.query(query, [id_transaksi], callback);
+        const [results] = await connection.query(query, [id_transaksi]);
+        return results;
     }
 
-    static create(data, callback) {
+    static async create(data) {
+        const connection = await db();
         const query = 'INSERT INTO transaksi SET ?';
-        db.query(query, data, callback);
+        const [results] = await connection.query(query, data);
+        return results;
     }
 
-    static createDetail(data, callback) {
+    static async createDetail(data) {
+        const connection = await db();
         const query = 'INSERT INTO detail_transaksi SET ?';
-        db.query(query, data, callback);
+        const [results] = await connection.query(query, data);
+        return results;
     }
 }
 

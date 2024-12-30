@@ -1,29 +1,53 @@
-const db = require('./db');
+const mysql = require('mysql2/promise');
+const db = require('./db'); // Pastikan db.js mengembalikan koneksi promise
 
 class Pelanggan {
-    static getAll(callback) {
+    static async getAll() {
+        const connection = await db();
         const query = 'SELECT * FROM pelanggan';
-        db.query(query, callback);
+        const [results] = await connection.query(query);
+        return results;
     }
 
-    static getById(id, callback) {
-        const query = 'SELECT * FROM pelanggan WHERE id = ?';
-        db.query(query, [id], callback);
+    static async getById(id) {
+        const connection = await db();
+        const [results] = await connection.query('SELECT * FROM pelanggan WHERE id = ?', [id]);
+        return results;
     }
 
-    static create(data, callback) {
-        const query = 'INSERT INTO pelanggan SET ?';
-        db.query(query, data, callback);
+    // Metode baru untuk mendapatkan pelanggan berdasarkan id_pengguna
+    static async getByUserId(userId) {
+        const connection = await db();
+        const query = 'SELECT * FROM pelanggan WHERE id_pengguna = ?'; // Pastikan nama kolom sesuai dengan yang ada di database
+        const [results] = await connection.query(query, [userId]);
+        return results;
     }
 
-    static update(id, data, callback) {
-        const query = 'UPDATE pelanggan SET ? WHERE id = ?';
-        db.query(query, [data, id], callback);
+    static async create(data) {
+        const connection = await db();
+        const [results] = await connection.query('INSERT INTO pelanggan SET ?', data);
+        return results;
     }
 
-    static delete(id, callback) {
-        const query = 'DELETE FROM pelanggan WHERE id = ?';
-        db.query(query, [id], callback);
+    static async update(id, data) {
+        const connection = await db();
+        console.log('Executing Query: UPDATE pelanggan SET ? WHERE id = ?', [data, id]);
+        try {
+            const [results] = await connection.query('UPDATE pelanggan SET ? WHERE id = ?', [data, id]);
+            console.log('Query Result:', results);
+            return results;
+        } catch (err) {
+            console.error('Database Error:', err.message);
+            throw new Error(err);
+        } finally {
+            await connection.end();
+        }
+    }
+    
+    static async delete(id) {
+        const connection = await db();
+        const [results] = await connection.query('DELETE FROM pelanggan WHERE id = ?', [id]);
+        return results;
     }
 }
 

@@ -1,42 +1,54 @@
 const Laporan = require('../models/laporanModel');
 
-exports.getAllLaporan = (req, res) => {
-    Laporan.getAll((err, results) => {
-        if (err) return res.status(500).send(err);
-        res.json(results);
-    });
+exports.getAllLaporan = async (req, res) => {
+    try {
+        const results = await Laporan.getAll();
+        res.status(200).json(results);
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching laporan data', error: err });
+    }
 };
 
-exports.getLaporanById = (req, res) => {
+exports.getLaporanById = async (req, res) => {
     const { id } = req.params;
-    Laporan.getById(id, (err, results) => {
-        if (err) return res.status(500).send(err);
-        if (results.length === 0) return res.status(404).send('Laporan not found');
-        res.json(results[0]);
-    });
+    try {
+        const results = await Laporan.getById(id);
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'Laporan not found' });
+        }
+        res.status(200).json(results[0]);
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching laporan by ID', error: err });
+    }
 };
 
-exports.createLaporan = (req, res) => {
+exports.createLaporan = async (req, res) => {
     const data = req.body;
-    Laporan.create(data, (err, results) => {
-        if (err) return res.status(500).send(err);
-        res.status(201).json({ id: results.insertId, ...data });
-    });
+    try {
+        const result = await Laporan.create(data);
+        res.status(201).json({ id: result.insertId, ...data });
+    } catch (err) {
+        res.status(500).json({ message: 'Error creating laporan', error: err });
+    }
 };
 
-exports.updateLaporan = (req, res) => {
+exports.updateLaporan = async (req, res) => {
     const { id } = req.params;
     const data = req.body;
-    Laporan.update(id, data, (err) => {
-        if (err) return res.status(500).send(err);
-        res.json({ message: 'Laporan updated successfully' });
-    });
+    try {
+        await Laporan.update(id, data);
+        res.status(200).json({ message: 'Laporan updated successfully' });
+    } catch (err) {
+        res.status(500).json({ message: 'Error updating laporan', error: err });
+    }
 };
 
-exports.deleteLaporan = (req, res) => {
+exports.deleteLaporan = async (req, res) => {
     const { id } = req.params;
-    Laporan.delete(id, (err) => {
-        if (err) return res.status(500).send(err);
-        res.json({ message: 'Laporan deleted successfully' });
-    });
+    try {
+        await Laporan.delete(id);
+        res.status(200).json({ message: 'Laporan deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ message: 'Error deleting laporan', error: err });
+    }
 };

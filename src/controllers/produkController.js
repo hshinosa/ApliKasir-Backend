@@ -81,6 +81,17 @@ exports.getProdukById = async (req, res) => {
   }
 };
 
+exports.getProdukByUser = async (req, res) => {
+  const { id } = req.params;
+  try {
+      const results = await Produk.getByUserId(id);
+      res.status(200).json(results);
+  } catch (err) {
+      console.error(`Error fetching produk for User ID ${id}:`, err.message);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 // Create produk baru dengan respons berkali-kali
 exports.createProduk = async (req, res) => {
   const {
@@ -169,14 +180,47 @@ exports.createProduk = async (req, res) => {
   }
 };
 
-// Update produk
+// Update product
 exports.updateProduk = async (req, res) => {
-  // Tetap sama seperti sebelumnya
+  const { id } = req.params;
+  const { id_pengguna, nama_produk, kode_produk, jumlah_produk, harga_modal, harga_jual } = req.body;
+
+  if (!id_pengguna || !nama_produk || !kode_produk || jumlah_produk == null || harga_jual == null) {
+      return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+      const penggunaExists = await Pengguna.getById(id_pengguna);
+      if (!penggunaExists) {
+          return res.status(400).json({ error: 'Pengguna tidak ditemukan' });
+      }
+
+      const data = { id_pengguna, nama_produk, kode_produk, jumlah_produk, harga_modal, harga_jual };
+
+      await Produk.update(id, data);
+      res.json({ message: 'Produk berhasil diperbarui' });
+  } catch (err) {
+      console.error(`Error updating produk with ID ${id}:`, err.message);
+      res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
-// Delete produk
-exports.deleteProduk = (req, res) => {
-  // Tetap sama seperti sebelumnya
+// Delete product
+exports.deleteProduk = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+      const produk = await Produk.getById(id);
+      if (!produk) {
+          return res.status(404).json({ error: 'Produk tidak ditemukan' });
+      }
+
+      await Produk.delete(id);
+      res.json({ message: 'Produk berhasil dihapus' });
+  } catch (err) {
+      console.error(`Error deleting produk with ID ${id}:`, err.message);
+      res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
 
@@ -265,98 +309,6 @@ exports.deleteProduk = (req, res) => {
 //     console.error(error);
 //     res.status(500).json({ message: "Internal Server Error" });
 //   }
-// };
-
-// exports.updateProduk = async (req, res) => {
-//   const { id } = req.params;
-//   const new_gambar_produk = req.file;
-//   const {
-//     id_pengguna,
-//     nama_produk,
-//     kode_produk,
-//     jumlah_produk,
-//     harga_modal,
-//     harga_jual,
-//   } = req.body;
-
-//   try {
-//     if (
-//       !id_pengguna ||
-//       !nama_produk ||
-//       !kode_produk ||
-//       !jumlah_produk ||
-//       !harga_modal ||
-//       !harga_jual
-//     ) {
-//       return res
-//         .status(400)
-//         .json({ message: "All fields are required except gambar_produk" });
-//     }
-
-//     // Cek apakah id_pengguna ada di tabel pengguna
-//     Pengguna.getById(id_pengguna, (err, pengguna) => {
-//       if (err) return res.status(500).send(err);
-//       if (pengguna.length === 0)
-//         return res.status(404).json({ message: "Invalid id_pengguna" });
-//     });
-
-//     // CARI PRODUK DULU
-//     const dataProduk = await getByID(id);
-//     if (dataProduk.length === 0) {
-//       return res.status(404).json({ message: "produk tidak ada" });
-//     }
-//     const found = dataProduk[0]; 
-
-//     // KEMUDIAN AMBIL GAMBARNYA
-//     const { gambar_produk } = found;
-//     if (gambar_produk) {
-//       const filePath = gambar_produk.split("/o/")[1].split("?")[0];
-//       const decodedPath = decodeURIComponent(filePath);
-
-//       const { firebaseStorage } = await firebaseConfig();
-//       const fileRef = ref(firebaseStorage, decodedPath);
-
-//       try {
-//         await deleteObject(fileRef);
-//       } catch (err) {
-//         return res.status(500).json({
-//           message: "Gagal menghapus gambar lama.",
-//           error: err.message,
-//         });
-//       }
-//     }
-
-//     const produkPICT = new_gambar_produk
-//       ? await uploadNewPoductPicture(new_gambar_produk)
-//       : null;
-
-//     const data = {
-//       id_pengguna,
-//       gambar_produk: produkPICT,
-//       nama_produk,
-//       kode_produk,
-//       jumlah_produk,
-//       harga_modal,
-//       harga_jual,
-//       updated_at: new Date(),
-//     };
-
-//     Produk.update(id, data, (err) => {
-//       if (err) return res.status(500).send(err);
-//       res.json({ message: "Produk updated successfully" });
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: "Internal Server Error" });
-//   }
-// };
-
-// exports.deleteProduk = (req, res) => {
-//   const { id } = req.params;
-//   Produk.delete(id, (err) => {
-//     if (err) return res.status(500).send(err);
-//     res.json({ message: "Produk deleted successfully" });
-//   });
 // };
 
 // const getByID = (id) => {
